@@ -25,6 +25,7 @@ GRAVITY = 9.82
 FOUR_THIRDS = 4/3
 TAU = 0.02
 
+# this is the equivalent of gym cartpole.py:step(self, action)
 def cart_pole(action, x, x_dot, theta, theta_dot):
 	"""runs the simulation of the cart pole
 	
@@ -57,16 +58,41 @@ def cart_pole(action, x, x_dot, theta, theta_dot):
 	theta = theta + (TAU * theta_dot)
 	theta_dot = theta_dot + (TAU * theta_acc)
 
+# Check whether the step should be failed
+def CheckIfFailed(x, x_dot, theta, theta_dot):
+	#calculate the theta Threashold
+	theta_threshold = 12 * 2 * math.pi / 360
+	x_threshold = 2.4
+	return bool(x < -x_threshold or x > x_threshold or theta < -theta_threshold or theta > theta_threshold)
+
+
 
 # Setup Episodes to run the simulation
 Episodes = 10
 Max_iterations = 5000
 
 # The 
-S_t
+s_t = []
 
-for i in range(Episodes):
-	print("Episode: " + str(i))
+with tf.Session() as episode_session:
+	for i in range(Episodes):
+		print("Episode: " + str(i))
+		# the shape has to be the format of the 4 parameters after action
+		episode_net = tflearn.input_data(shape=[None, 4])
+		episode_net = tflearn.fully_connected(episode_net, 256, activation="relu")
+		episode_net = tflearn.fully_connected(episode_net, 256, activation="relu")
+		episode_net = tflearn.fully_connected(episode_net, 256, activation="relu")
+		result_net = tflearn.fully_connected(episode_net, 2, activation="softmax")
+
+		rewards = tf.placeholder(tf.float32, [None])
+		actions = tf.placeholder(tf.int32, [None])
+		outputs = tf.gather(tf.reshape(result_net, [-1]), tf.range(0, tf.shape(result_net)[0] * tf.shape(result_net)[1], 2) + actions)
+		loss = -tf.reduce_mean(tf.log(outputs) * rewards)
+		optimizer = tf.train.AdamOptimizer()
+		update = optimizer.minimize(loss)
+
+
+
 
 
 

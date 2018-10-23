@@ -5,6 +5,10 @@
 
 #Imports
 import math
+# libraries for the re-inforced learning
+import tensorflow as tf
+import tflearn
+import numpy as np
 
 # constants
 # +- 10 Newtons
@@ -52,6 +56,18 @@ def cart_pole(action, x, x_dot, theta, theta_dot):
 	x_dot = x_dot + (TAU * x_acc)
 	theta = theta + (TAU * theta_dot)
 	theta_dot = theta_dot + (TAU * theta_acc)
+
+
+# Setup Episodes to run the simulation
+Episodes = 10
+Max_iterations = 5000
+
+# The 
+S_t
+
+for i in range(Episodes):
+	print("Episode: " + str(i))
+
 
 
 

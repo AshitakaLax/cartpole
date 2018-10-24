@@ -62,7 +62,8 @@ with tf.Session() as sess:
                 train_data.extend(ep_history)
                 if i % 10 == 0 and i != 0:
                     train_data = np.array(train_data)
-                    sess.run(update, feed_dict={observation: np.vstack(train_data[:, 0]),
+                    temp_data = np.vstack(train_data[:, 0])
+                    sess.run(update, feed_dict={observation: temp_data,
                                                     reward_holder: train_data[:, 1],
                                                     action_holder: train_data[:, 2]})
                     train_data = []

@@ -96,7 +96,7 @@ update = optimizer.minimize(loss)
 
 # Setup Episodes to run the simulation
 Episodes = 2000
-Max_iterations = 200
+Max_iterations = 300
 
 # The 
 s_t = []
@@ -134,7 +134,9 @@ with tf.Session() as episode_session:
 				a_t.extend(epi_history)
 				if i % 10 == 0 and i != 0:
 					a_t = np.array(a_t)
-					episode_session.run(update, feed_dict={input_net: np.vstack(a_t[:, 0]), rewards: a_t[:, 1], actions: a_t[:, 2]})
+					shaped_data = a_t[:,[0,1,2,3]]
+					episode_session.run(update, feed_dict={input_net: shaped_data, rewards: a_t[:, 4], actions: a_t[:, 5]})
+					#episode_session.run(update, feed_dict={input_net: np.vstack(a_t[:, 0]), rewards: a_t[:, 1], actions: a_t[:, 2]})
 					a_t = []
 				break
 		if i % 100 == 0 and i != 0:

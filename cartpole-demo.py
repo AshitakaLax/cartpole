@@ -6,6 +6,7 @@
 #Imports
 import math
 import gym
+import time
 # libraries for the re-inforced learning
 import tensorflow as tf
 import tflearn
@@ -102,8 +103,8 @@ optimizer = tf.train.AdamOptimizer()
 update = optimizer.minimize(loss)
 
 # Setup Episodes to run the simulation
-Episodes = 20000
-Max_iterations = 100
+Episodes = 1000
+Max_iterations = 500
 
 # The 
 reward_sum_arr = []
@@ -121,12 +122,8 @@ with tf.Session() as episode_session:
 		cart_pole_params = np.random.uniform(low=-0.05, high=0.05, size=(4,))
 		for j in range(Max_iterations):
 			iteration_result = episode_session.run(result_net, feed_dict={input_net: [cart_pole_params]}).reshape(2)
-			#iteration_result = episode_session.run(result_net, feed_dict={input_net: [obs]}).reshape(2)
 			action = np.random.choice(iteration_result, p=iteration_result)
 			action = np.argmax(iteration_result == action)
-			#obs1, r, d, _ = env.step(action)
-			#reward = r
-			#failed = d
 			x, x_dot, theta, theta_dot = cart_pole(action, cart_pole_params[0], cart_pole_params[1], cart_pole_params[2], cart_pole_params[3])
 			failed = CheckIfFailed(x, x_dot, theta, theta_dot)
 			reward = 0.0
@@ -159,16 +156,38 @@ with tf.Session() as episode_session:
 					episode_session.run(update, feed_dict={input_net: shaped_data, rewards: data_set[:, 4], actions: data_set[:, 5]})
 					data_set = []
 				break
-		if i % 50 == 0 and i != 0:
-			print(np.mean(reward_sum_arr[-50:]))
-			if np.mean(reward_sum_arr[-50:]) == 100:
+		if i % 100 == 0 and i != 0:
+			print(np.mean(reward_sum_arr[-100:]))
+			if np.mean(reward_sum_arr[-100:]) == 200:
 				break
-	model_saver.save(episode_session, "models/cart_pole.ckpt")
+	model_saver.save(episode_session, "/tmp/model.ckpt")
 
 avg_reward = [np.mean(reward_sum_arr[i-10:i+10]) for i in range(10, len(reward_sum_arr))]
 print(avg_reward[::10])
 
 
+
+max_time = 200
+saver = tf.train.Saver()
+    
+with tf.Session() as sess:
+    saver.restore(sess, "/tmp/model.ckpt")
+    #Show the results
+    for i in range(10):
+        obs = env.reset()
+        episode_reward = 0
+        for j in range(max_time):
+            #Choose an action
+            a_one_hot = sess.run(result_net, feed_dict={input_net: [obs]}).reshape(2)
+            action = np.random.choice(a_one_hot, p=a_one_hot)
+            action = np.argmax(a_one_hot == action)
+            env.render()
+            time.sleep(0.005)
+            obs, r, d, _ = env.step(action)
+            episode_reward += r
+            if d == True:
+                break
+        print(episode_reward)
 
 
 

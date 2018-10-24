@@ -6,27 +6,29 @@
 #Imports
 import math
 import gym
+from gym import wrappers
 import time
 # libraries for the re-inforced learning
 import tensorflow as tf
 import tflearn
 import numpy as np
+import matplotlib.pyplot
+
 
 env = gym.make("CartPole-v0")
 # constants
 # +- 10 Newtons
 FORCE_MAG = 10.0
+
 LENGTH = 0.5
 CART_MASS = 1.0
 POLE_MASS = 0.1
-
-# FORCE_MAG = 10.0
 # LENGTH = 0.326
 # CART_MASS = 0.711
 # POLE_MASS = 0.209
+
 # pole mass * Length of the pole
 POLEMASS_LENGTH = POLE_MASS * LENGTH
-
 TOTAL_MASS = CART_MASS + POLE_MASS
 GRAVITY = 9.8
 FOUR_THIRDS = 4.0/3.0
@@ -109,14 +111,12 @@ Max_iterations = 500
 # The 
 reward_sum_arr = []
 data_set = []
-
+episode_count = []
 model_saver = tf.train.Saver()
 with tf.Session() as episode_session:
 
 	episode_session.run(tf.global_variables_initializer())
 	for i in range(Episodes):
-		#obs = env.reset()
-		#print("Episode: " + str(i))
 		epi_reward = 0
 		epi_history = []
 		cart_pole_params = np.random.uniform(low=-0.05, high=0.05, size=(4,))
@@ -131,9 +131,7 @@ with tf.Session() as episode_session:
 				reward = 1.0
 			
 			epi_reward += reward
-			#epi_history.append([[obs[0], obs[1], obs[2], obs[3]], reward, action])
 			epi_history.append([cart_pole_params[0], cart_pole_params[1], cart_pole_params[2], cart_pole_params[3], reward, action])
-			#obs = obs1
 			cart_pole_params[0] = x
 			cart_pole_params[1] = x_dot
 			cart_pole_params[2] = theta
@@ -144,15 +142,13 @@ with tf.Session() as episode_session:
 				# failed means that the ended the last round, but we still want to have
 				# a positive reward
 				reward_sum_arr.append(epi_reward + 1.0)
+				episode_count.append(i)
 				epi_history = np.array(epi_history)
-				#epi_history[:, 1] = reward_update(epi_history[:, 1])
 				epi_history[:, 4] = reward_update(epi_history[:, 4])
 				data_set.extend(epi_history)
 				if i % 10 == 0 and i != 0:
 					data_set = np.array(data_set)
 					shaped_data = data_set[:,[0,1,2,3]]
-					#shaped_data = np.vstack(data_set[:, 0])
-					#episode_session.run(update, feed_dict={input_net: shaped_data, rewards: data_set[:, 1], actions: data_set[:, 2]})
 					episode_session.run(update, feed_dict={input_net: shaped_data, rewards: data_set[:, 4], actions: data_set[:, 5]})
 					data_set = []
 				break
@@ -165,9 +161,18 @@ with tf.Session() as episode_session:
 avg_reward = [np.mean(reward_sum_arr[i-10:i+10]) for i in range(10, len(reward_sum_arr))]
 print(avg_reward[::10])
 
+#matplotlib.pyplot.scatter(episode_count, reward_sum_arr)
+fig = matplotlib.pyplot.figure()
+matplotlib.pyplot.plot(episode_count, reward_sum_arr)
+maxIterationArr = np.full(len(episode_count), Max_iterations)
+matplotlib.pyplot.plot(episode_count, maxIterationArr)
+matplotlib.pyplot.legend(['Reward per episode', 'Max Iteration'], loc='upper left')
+matplotlib.pyplot.xlabel('Episode')
+matplotlib.pyplot.ylabel('Reward')
+fig.suptitle('Cart-pole Reward')
+matplotlib.pyplot.show()
 
-
-max_time = 200
+max_time = 150
 saver = tf.train.Saver()
     
 with tf.Session() as sess:
@@ -182,7 +187,7 @@ with tf.Session() as sess:
             action = np.random.choice(a_one_hot, p=a_one_hot)
             action = np.argmax(a_one_hot == action)
             env.render()
-            time.sleep(0.005)
+            time.sleep(0.01)
             obs, r, d, _ = env.step(action)
             episode_reward += r
             if d == True:

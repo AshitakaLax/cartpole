@@ -5,15 +5,21 @@
 
 #Imports
 import math
+import gym
 # libraries for the re-inforced learning
 import tensorflow as tf
 import tflearn
 import numpy as np
 
+env = gym.make("CartPole-v0")
 # constants
 # +- 10 Newtons
-FORCE_MAG = 10.0
+# FORCE_MAG = 10.0
+# LENGTH = 0.5
+# CART_MASS = 1.0
+# POLE_MASS = 0.1
 
+FORCE_MAG = 10.0
 LENGTH = 0.326
 CART_MASS = 0.711
 POLE_MASS = 0.209
@@ -21,9 +27,10 @@ POLE_MASS = 0.209
 POLEMASS_LENGTH = POLE_MASS * LENGTH
 
 TOTAL_MASS = CART_MASS + POLE_MASS
-GRAVITY = 9.82
-FOUR_THIRDS = 4/3
+GRAVITY = 9.8
+FOUR_THIRDS = 4.0/3.0
 TAU = 0.02
+
 
 # this is the equivalent of gym cartpole.py:step(self, action)
 def cart_pole(action, x, x_dot, theta, theta_dot):
@@ -96,23 +103,29 @@ update = optimizer.minimize(loss)
 
 # Setup Episodes to run the simulation
 Episodes = 2000
-Max_iterations = 300
+Max_iterations = 200
 
 # The 
-s_t = []
-a_t = []
+reward_sum_arr = []
+data_set = []
 
 with tf.Session() as episode_session:
+
 	episode_session.run(tf.global_variables_initializer())
 	for i in range(Episodes):
-		print("Episode: " + str(i))
+		#obs = env.reset()
+		#print("Episode: " + str(i))
 		epi_reward = 0
 		epi_history = []
 		cart_pole_params = np.random.uniform(low=-0.05, high=0.05, size=(4,))
 		for j in range(Max_iterations):
 			iteration_result = episode_session.run(result_net, feed_dict={input_net: [cart_pole_params]}).reshape(2)
+			#iteration_result = episode_session.run(result_net, feed_dict={input_net: [obs]}).reshape(2)
 			action = np.random.choice(iteration_result, p=iteration_result)
 			action = np.argmax(iteration_result == action)
+			#obs1, r, d, _ = env.step(action)
+			#reward = r
+			#failed = d
 			x, x_dot, theta, theta_dot = cart_pole(action, cart_pole_params[0], cart_pole_params[1], cart_pole_params[2], cart_pole_params[3])
 			failed = CheckIfFailed(x, x_dot, theta, theta_dot)
 			reward = 0.0
@@ -120,7 +133,9 @@ with tf.Session() as episode_session:
 				reward = 1.0
 			
 			epi_reward += reward
-			epi_history.append([x, x_dot, theta, theta_dot, reward, action])
+			#epi_history.append([[obs[0], obs[1], obs[2], obs[3]], reward, action])
+			epi_history.append([cart_pole_params[0], cart_pole_params[1], cart_pole_params[2], cart_pole_params[3], reward, action])
+			#obs = obs1
 			cart_pole_params[0] = x
 			cart_pole_params[1] = x_dot
 			cart_pole_params[2] = theta
@@ -128,23 +143,27 @@ with tf.Session() as episode_session:
 			
 			# end of the episode
 			if failed:
-				s_t.append(epi_reward)
+				# failed means that the ended the last round, but we still want to have
+				# a positive reward
+				reward_sum_arr.append(epi_reward + 1.0)
 				epi_history = np.array(epi_history)
-				epi_history[:, 1] = reward_update(epi_history[:, 1])
-				a_t.extend(epi_history)
+				#epi_history[:, 1] = reward_update(epi_history[:, 1])
+				epi_history[:, 4] = reward_update(epi_history[:, 4])
+				data_set.extend(epi_history)
 				if i % 10 == 0 and i != 0:
-					a_t = np.array(a_t)
-					shaped_data = a_t[:,[0,1,2,3]]
-					episode_session.run(update, feed_dict={input_net: shaped_data, rewards: a_t[:, 4], actions: a_t[:, 5]})
-					#episode_session.run(update, feed_dict={input_net: np.vstack(a_t[:, 0]), rewards: a_t[:, 1], actions: a_t[:, 2]})
-					a_t = []
+					data_set = np.array(data_set)
+					shaped_data = data_set[:,[0,1,2,3]]
+					#shaped_data = np.vstack(data_set[:, 0])
+					#episode_session.run(update, feed_dict={input_net: shaped_data, rewards: data_set[:, 1], actions: data_set[:, 2]})
+					episode_session.run(update, feed_dict={input_net: shaped_data, rewards: data_set[:, 4], actions: data_set[:, 5]})
+					data_set = []
 				break
 		if i % 100 == 0 and i != 0:
-			print(np.mean(s_t[-100:]))
-			if np.mean(s_t[-100:]) == 200:
+			print(np.mean(reward_sum_arr[-100:]))
+			if np.mean(reward_sum_arr[-100:]) == 200:
 				break
 
-avg_reward = [np.mean(s_t[i-10:i+10]) for i in range(10, len(s_t))]
+avg_reward = [np.mean(reward_sum_arr[i-10:i+10]) for i in range(10, len(reward_sum_arr))]
 print(avg_reward[::10])
 
 
